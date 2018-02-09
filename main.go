@@ -2,19 +2,20 @@ package main
 
 import (
 	"image"
-	_ "image/png"
 	"image/draw"
+	"image/png"
 	"os"
 	"log"
 	"github.com/skratchdot/open-golang/open"
+	"bufio"
 )
 
 const (
 	imageWidth = 500
 	imageHeight = 200
 
-	offzetPointX = 20
-	offzetPointY = 10
+	offsetPointX = 20
+	offsetPointY = 10
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	backgroundImage := image.White
 	draw.Draw(rgbaImage, rgbaImage.Bounds(), backgroundImage, image.ZP, draw.Src)
 
-	// Draw the avatar (test image)
+	// Draw the avatar (test image).
 	avatarImageReader, err := os.Open("testdata/rsz_telegram.png")
 	if err != nil {
 		log.Fatal("open avatar image failed", err)
@@ -37,6 +38,29 @@ func main() {
 		log.Fatal("decode avatar image failed", err)
 	}
 
-	draw.Draw(rgbaImage, rgbaImage.Bounds(), avatarImage, image.Point{offzetPointX, offzetPointY}, draw.Src)
+	startPoint := image.Pt(offsetPointX, offsetPointY)
+	draw.Draw(rgbaImage, rgbaImage.Bounds(), avatarImage, rgbaImage.Bounds().Min.Sub(startPoint), draw.Src)
 
+	// Save image to disk.
+	outFile, err := os.Create("out.png")
+	if err != nil {
+		log.Fatal("creat file failed", err)
+	}
+	defer outFile.Close()
+
+	bufferWriter := bufio.NewWriter(outFile)
+	err = png.Encode(bufferWriter, rgbaImage)
+	if err != nil {
+		log.Fatal("encode image failed", err)
+	}
+	err = bufferWriter.Flush()
+	if err != nil {
+		log.Fatal("flush buffer to disk failed", err)
+	}
+
+	// Open image.
+	err = open.Run("out.png")
+	if err != nil {
+		log.Fatal("open image failed", err)
+	}
 }
