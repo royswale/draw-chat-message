@@ -9,7 +9,7 @@ import (
 
 	"image"
 	"image/draw"
-	"image/png"
+	"image/jpeg"
 	"image/color"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
@@ -56,7 +56,7 @@ func main() {
 	draw.Draw(rgbaImage, rgbaImage.Bounds(), backgroundImage, image.ZP, draw.Src)
 
 	// Draw the avatar image.
-	avatarImageReader, err := os.Open("testdata/rsz_telegram.png")
+	avatarImageReader, err := os.Open("testpic/lord_40.jpg")
 	if err != nil {
 		log.Fatalf("open avatar image failed: %v", err)
 	}
@@ -88,23 +88,23 @@ func main() {
 	dateDrawer.DrawString("1/24/17")
 
 	// --- Draw the message
-	msg := "Why it is bits\nBut not bit ?"
-	messageDrawer := newDrawer(rgbaImage, fontBold, color.Black, 54)
+	msg := "Don't play hatred\nMake BCH better"
+	messageDrawer := newDrawer(rgbaImage, fontBold, color.Black, 48)
 	for i, line := range strings.Split(msg, "\n") {
-		// font size is 54px, spacing of lines is 5px
-		messageDrawer.Dot = fixed.P(nameX, nameY + (54 + 5) * (i+1))
+		// font size is 48px, spacing of lines is 5px
+		messageDrawer.Dot = fixed.P(nameX, nameY + (48 + 5) * (i+1))
 		messageDrawer.DrawString(line)
 	}
 
 	// Save image to disk.
-	outFile, err := os.Create("out.png")
+	outFile, err := os.Create("out.jpeg")
 	if err != nil {
 		log.Fatalf("creat file failed: %v", err)
 	}
 	defer outFile.Close()
 
 	bufferWriter := bufio.NewWriter(outFile)
-	err = png.Encode(bufferWriter, rgbaImage)
+	err = jpeg.Encode(bufferWriter, rgbaImage, nil)
 	if err != nil {
 		log.Fatalf("encode image failed: %v", err)
 	}
@@ -113,7 +113,7 @@ func main() {
 		log.Fatalf("flush buffer to disk failed: %v", err)
 	}
 
-	err = open.Run("out.png")
+	err = open.Run("out.jpeg")
 	if err != nil {
 		log.Fatalf("open image failed: %v", err)
 	}
