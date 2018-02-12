@@ -46,6 +46,9 @@ var (
 	name        = flag.String("name", "Jihan Wu", "message user name")
 	date        = flag.String("date", "1/24/2017", "message date")
 	content     = flag.String("content", "Don't play hatred\nMake BCH better", "message content")
+	outputName  = flag.String("output", "out", "output file name(without file suffix)")
+	isOpen      = flag.Bool("open", true, "use os default open tool to view image")
+	stdout      = flag.Bool("stdout", false, "write image to stdout")
 	dpi         = flag.Float64("dpi", 72, "screen resolution in Dots Per Inch")
 )
 
@@ -104,10 +107,18 @@ func main() {
 		contentDrawer.DrawString(line)
 	}
 
-	// Save image to disk.
-	outFile, err := os.Create("out.jpeg")
-	if err != nil {
-		log.Fatalf("creat file failed: %v", err)
+	var outFile *os.File
+	if *stdout {
+		// If `stdout` flag is set then just output the image to the stdout.
+		outFile = os.Stdout
+	} else {
+		if len(*outputName) == 0 {
+			log.Fatalf("output name can't be empty")
+		}
+		outFile, err = os.Create(*outputName + ".jpeg")
+		if err != nil {
+			log.Fatalf("create file failed: %v", err)
+		}
 	}
 	defer outFile.Close()
 
@@ -121,9 +132,11 @@ func main() {
 		log.Fatalf("flush buffer to disk failed: %v", err)
 	}
 
-	err = open.Run("out.jpeg")
-	if err != nil {
-		log.Fatalf("open image failed: %v", err)
+	if *isOpen && !*stdout {
+		err = open.Run("out.jpeg")
+		if err != nil {
+			log.Fatalf("open image failed: %v", err)
+		}
 	}
 }
 
