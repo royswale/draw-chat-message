@@ -64,9 +64,7 @@ func main() {
 
 	// New a RGBA image with the defined size.
 	rgbaImage := image.NewRGBA(image.Rect(0, 0, imageWidth, imageHeight))
-
-	backgroundImage := image.White
-	draw.Draw(rgbaImage, rgbaImage.Bounds(), backgroundImage, image.ZP, draw.Src)
+	draw.Draw(rgbaImage, rgbaImage.Bounds(), image.White, image.ZP, draw.Src)
 
 	// Draw the avatar image.
 	avatarImageReader := makeImageReader()
@@ -83,14 +81,13 @@ func main() {
 	draw.Draw(rgbaImage, rgbaImage.Bounds(), rszAvatarImage,
 		rgbaImage.Bounds().Min.Sub(image.Pt(offsetX, offsetY)), draw.Src)
 
-	// --- Draw the name
+	// Draw the name date and message content.
 	nameDrawer := newDrawer(rgbaImage, fontBold, nameColor, 18)
 	nameX := offsetX + 50 + 10 // image width is 50px and offset is 10px
 	nameY := offsetY + 18      // font size is 18px
 	nameDrawer.Dot = fixed.P(nameX, nameY)
 	nameDrawer.DrawString(*name)
 
-	// --- Draw the date
 	dateDrawer := newDrawer(rgbaImage, fontRegular, dateColor, 18)
 	dateDrawer.Dot = fixed.Point26_6{
 		// offset is 10px
@@ -100,7 +97,6 @@ func main() {
 	}
 	dateDrawer.DrawString(*date)
 
-	// --- Draw the message
 	contentDrawer := newDrawer(rgbaImage, fontBold, color.Black, 48)
 	for i, line := range strings.Split(*content, "\n") {
 		// font size is 48px, spacing of lines is 5px
