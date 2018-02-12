@@ -42,13 +42,13 @@ var (
 )
 
 var (
-	imageSource = flag.String("image", "testpic/lord_40.jpg", "avatar image source: file | url")
-	name        = flag.String("name", "Jihan Wu", "message user name")
+	imageSource = flag.String("image", "", "avatar image source: file | url")
+	name        = flag.String("name", "Kevin", "message user name")
 	date        = flag.String("date", "1/24/2017", "message date")
-	content     = flag.String("content", "Don't play hatred\nMake BCH better", "message content")
-	outputName  = flag.String("output", "out", "output file name(without file suffix)")
-	isOpen      = flag.Bool("open", true, "use os default open tool to view image")
-	stdout      = flag.Bool("stdout", false, "write image to stdout")
+	content     = flag.String("content", "", "message content")
+	outputName  = flag.String("output", "out", "output file name (with no suffix)")
+	isOpen      = flag.Bool("open", true, "open file with the default tool")
+	stdout      = flag.Bool("stdout", false, "write output to stdout")
 	dpi         = flag.Float64("dpi", 72, "screen resolution in Dots Per Inch")
 )
 
@@ -142,6 +142,10 @@ func main() {
 
 // Make an image reader from a local image file or fetch from an remote url.
 func makeImageReader() io.ReadCloser {
+	if len(*imageSource) == 0 {
+		log.Fatalf("image source can't be empty")
+	}
+
 	if url, err := url.ParseRequestURI(*imageSource); err == nil {
 		if len(url.Scheme) > 0 {
 			// `imageSource` can be parsed and has a scheme, so it is a url.
