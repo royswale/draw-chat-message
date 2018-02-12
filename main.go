@@ -1,27 +1,34 @@
 package main
 
 import (
-	"os"
-	"log"
 	"bufio"
 	"flag"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"image"
+	"image/color"
 	"image/draw"
 	"image/jpeg"
-	"image/color"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
-	"golang.org/x/image/font/gofont/gobold"
+	_ "image/png"
+
 	"github.com/golang/freetype/truetype"
+	"github.com/nfnt/resize"
 	"github.com/skratchdot/open-golang/open"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/math/fixed"
 )
 
 const (
 	// chat message image size
-	imageWidth = 500
+	imageWidth  = 500
 	imageHeight = 200
 
 	// offset of the ZP
@@ -30,11 +37,17 @@ const (
 )
 
 var (
-	nameColor = color.RGBA{0, 119, 170, 255} // #07a
-	dateColor = color.RGBA{113, 140, 147, 255} // #858C93
+	nameColor = color.RGBA{0, 119, 170, 255}   // hex value: #07a
+	dateColor = color.RGBA{113, 140, 147, 255} // hex value: #858C93
 )
 
-var dpi = flag.Float64("dpi", 72, "screen resolution in Dots Per Inch")
+var (
+	imageSource = flag.String("image", "testpic/lord_40.jpg", "avatar image source: file | url")
+	name        = flag.String("name", "Jihan Wu", "message user name")
+	date        = flag.String("date", "1/24/2017", "message date")
+	content     = flag.String("content", "Don't play hatred\nMake BCH better", "message content")
+	dpi         = flag.Float64("dpi", 72, "screen resolution in Dots Per Inch")
+)
 
 func main() {
 	flag.Parse()
@@ -56,18 +69,18 @@ func main() {
 	draw.Draw(rgbaImage, rgbaImage.Bounds(), backgroundImage, image.ZP, draw.Src)
 
 	// Draw the avatar image.
-	avatarImageReader, err := os.Open("testpic/lord_40.jpg")
-	if err != nil {
-		log.Fatalf("open avatar image failed: %v", err)
-	}
+	avatarImageReader := makeImageReader()
 	defer avatarImageReader.Close()
 
 	avatarImage, _, err := image.Decode(avatarImageReader)
 	if err != nil {
-		log.Fatalf("decode avatar image failed: %v", err)
+		log.Fatalf("decode image failed: %v", err)
 	}
 
-	draw.Draw(rgbaImage, rgbaImage.Bounds(), avatarImage,
+	// Resize avatar image to 40 * 40 size.
+	rszAvatarImage := resize.Resize(40, 40, avatarImage, resize.NearestNeighbor)
+
+	draw.Draw(rgbaImage, rgbaImage.Bounds(), rszAvatarImage,
 		rgbaImage.Bounds().Min.Sub(image.Pt(offsetX, offsetY)), draw.Src)
 
 	// --- Draw the name
@@ -75,25 +88,24 @@ func main() {
 	nameX := offsetX + 50 + 10 // image width is 50px and offset is 10px
 	nameY := offsetY + 18      // font size is 18px
 	nameDrawer.Dot = fixed.P(nameX, nameY)
-	nameDrawer.DrawString("Jihan Wu")
+	nameDrawer.DrawString(*name)
 
 	// --- Draw the date
 	dateDrawer := newDrawer(rgbaImage, fontRegular, dateColor, 18)
 	dateDrawer.Dot = fixed.Point26_6{
 		// offset is 10px
-		X: fixed.I(nameX + 10) + nameDrawer.MeasureString("Jihan Wu"),
+		X: fixed.I(nameX+10) + nameDrawer.MeasureString(*name),
 		// font size is 18px
 		Y: fixed.I(offsetY + 18),
 	}
-	dateDrawer.DrawString("1/24/17")
+	dateDrawer.DrawString(*date)
 
 	// --- Draw the message
-	msg := "Don't play hatred\nMake BCH better"
-	messageDrawer := newDrawer(rgbaImage, fontBold, color.Black, 48)
-	for i, line := range strings.Split(msg, "\n") {
+	contentDrawer := newDrawer(rgbaImage, fontBold, color.Black, 48)
+	for i, line := range strings.Split(*content, "\n") {
 		// font size is 48px, spacing of lines is 5px
-		messageDrawer.Dot = fixed.P(nameX, nameY + (48 + 5) * (i+1))
-		messageDrawer.DrawString(line)
+		contentDrawer.Dot = fixed.P(nameX, nameY+(48+5)*(i+1))
+		contentDrawer.DrawString(line)
 	}
 
 	// Save image to disk.
@@ -119,6 +131,31 @@ func main() {
 	}
 }
 
+// Make an image reader from a local image file or fetch from an remote url.
+func makeImageReader() io.ReadCloser {
+	if url, err := url.ParseRequestURI(*imageSource); err == nil {
+		if len(url.Scheme) > 0 {
+			// `imageSource` can be parsed and has a scheme, so it is a url.
+			resp, err := http.Get(*imageSource)
+			if err != nil {
+				log.Fatalf("failed to fetch image: %v", err)
+			}
+			return resp.Body
+		}
+	}
+
+	// otherwise read from local file system
+	imageSourcePath, err := filepath.Abs(*imageSource)
+	if err != nil {
+		log.Fatalf("wrong image path: %v", err)
+	}
+	imageReader, err := os.Open(imageSourcePath)
+	if err != nil {
+		log.Fatalf("open image failed: %v", err)
+	}
+	return imageReader
+}
+
 // New a text drawer, return a font.Drawer
 // - `dstImage` is the dst image drawing on
 // - new a font.Face with `f`
@@ -128,8 +165,8 @@ func newDrawer(dstImage *image.RGBA, f *truetype.Font, fontColor color.Color, fo
 		Dst: dstImage,
 		Src: image.NewUniform(fontColor),
 		Face: truetype.NewFace(f, &truetype.Options{
-			Size: pixelsToPoints(fontSize),
-			DPI: *dpi,
+			Size:    pixelsToPoints(fontSize),
+			DPI:     *dpi,
 			Hinting: font.HintingFull,
 		}),
 	}
@@ -137,6 +174,6 @@ func newDrawer(dstImage *image.RGBA, f *truetype.Font, fontColor color.Color, fo
 
 // Convert pixels to points (font size uint)
 // - `pt` / 72 * `DPI` = `px`
-func pixelsToPoints(px float64) float64{
+func pixelsToPoints(px float64) float64 {
 	return px * 72 / *dpi
 }
