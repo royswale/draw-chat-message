@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +23,7 @@ import (
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/math/fixed"
+	"fmt"
 )
 
 const (
@@ -58,11 +58,11 @@ func main() {
 	// Parse all font data.
 	fontBold, err := truetype.Parse(gobold.TTF)
 	if err != nil {
-		log.Fatalf("parse font bytes failed: %v", err)
+		errorReturn("parse font bytes failed: %v", err)
 	}
 	fontRegular, err := truetype.Parse(goregular.TTF)
 	if err != nil {
-		log.Fatalf("parse font bytes failed: %v", err)
+		errorReturn("parse font bytes failed: %v", err)
 	}
 
 	// New a RGBA image with the defined size.
@@ -75,7 +75,7 @@ func main() {
 
 	avatarImage, _, err := image.Decode(avatarImageReader)
 	if err != nil {
-		log.Fatalf("decode image failed: %v", err)
+		errorReturn("decode avatar image failed: %v", err)
 	}
 
 	// Resize avatar image to 40 * 40 size.
@@ -113,11 +113,11 @@ func main() {
 		outFile = os.Stdout
 	} else {
 		if len(*outputName) == 0 {
-			log.Fatalf("output name can't be empty")
+			errorReturn("output file name MUST NOT be empty")
 		}
 		outFile, err = os.Create(*outputName + ".jpeg")
 		if err != nil {
-			log.Fatalf("create file failed: %v", err)
+			errorReturn("create file failed: %v", err)
 		}
 	}
 	defer outFile.Close()
@@ -125,17 +125,17 @@ func main() {
 	bufferWriter := bufio.NewWriter(outFile)
 	err = jpeg.Encode(bufferWriter, rgbaImage, nil)
 	if err != nil {
-		log.Fatalf("encode image failed: %v", err)
+		errorReturn("encode image failed: %v", err)
 	}
 	err = bufferWriter.Flush()
 	if err != nil {
-		log.Fatalf("flush buffer to disk failed: %v", err)
+		errorReturn("flush buffer to disk failed: %v", err)
 	}
 
 	if *isOpen && !*stdout {
 		err = open.Run("out.jpeg")
 		if err != nil {
-			log.Fatalf("open image failed: %v", err)
+			errorReturn("open image failed: %v", err)
 		}
 	}
 }
@@ -143,7 +143,7 @@ func main() {
 // Make an image reader from a local image file or fetch from an remote url.
 func makeImageReader() io.ReadCloser {
 	if len(*imageSource) == 0 {
-		log.Fatalf("image source can't be empty")
+		errorReturn("avatar image source MUST NOT be empty")
 	}
 
 	if url, err := url.ParseRequestURI(*imageSource); err == nil {
@@ -151,7 +151,7 @@ func makeImageReader() io.ReadCloser {
 			// `imageSource` can be parsed and has a scheme, so it is a url.
 			resp, err := http.Get(*imageSource)
 			if err != nil {
-				log.Fatalf("failed to fetch image: %v", err)
+				errorReturn("failed to fetch image: %v", err)
 			}
 			return resp.Body
 		}
@@ -160,11 +160,11 @@ func makeImageReader() io.ReadCloser {
 	// otherwise read from local file system
 	imageSourcePath, err := filepath.Abs(*imageSource)
 	if err != nil {
-		log.Fatalf("wrong image path: %v", err)
+		errorReturn("get image path failed: %v", err)
 	}
 	imageReader, err := os.Open(imageSourcePath)
 	if err != nil {
-		log.Fatalf("open image failed: %v", err)
+		errorReturn("open image failed: %v", err)
 	}
 	return imageReader
 }
@@ -189,4 +189,10 @@ func newDrawer(dstImage *image.RGBA, f *truetype.Font, fontColor color.Color, fo
 // - `pt` / 72 * `DPI` = `px`
 func pixelsToPoints(px float64) float64 {
 	return px * 72 / *dpi
+}
+
+func errorReturn(f string, v ...interface{}) {
+	fmt.Fprintf(os.Stderr, "\033[1;31m[error]\033[0m " + f, v...)
+	fmt.Fprintln(os.Stderr)
+	os.Exit(1)
 }
