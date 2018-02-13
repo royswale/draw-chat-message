@@ -28,12 +28,14 @@ it will output a out.jpeg (you can use `-output` flag to define your custom file
 turn on `-open=false` flag if you don't want open the image. 
 
 `draw-chat-message` is very versatile, it also can output to `stdout` instead of a file, you can use it with
-imgcat and display image in iTerm2.
+[imgcat](https://github.com/olivere/iterm2-imagetools) and display image in iTerm2.
 
 ```bash
 draw-chat-message -image gopher.png -name Golang -content "Hello world\nUse Golang" -stdout | imgcat
 ```
 
+This is an example use the `-stdout` and print things on the terminal.
+ 
 ![stdout](stdout.jpg)
 
 Not enough? other hundreds of configurable flags, please check `draw-chat-message -help`.
