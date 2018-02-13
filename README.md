@@ -1,4 +1,4 @@
-# draw-chat-message
+# Draw chat message
 
 ![sticker](sticker.jpeg)
 
