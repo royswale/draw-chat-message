@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,17 +14,16 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
 	_ "image/png"
+	"image/jpeg"
 
 	"github.com/golang/freetype/truetype"
 	"github.com/nfnt/resize"
-	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/math/fixed"
-	"fmt"
+	"github.com/skratchdot/open-golang/open"
 )
 
 const (
@@ -65,7 +65,7 @@ func main() {
 		errorReturn("parse font bytes failed: %v", err)
 	}
 
-	// New a RGBA image with the defined size.
+	// New white board with the defined size.
 	rgbaImage := image.NewRGBA(image.Rect(0, 0, imageWidth, imageHeight))
 	draw.Draw(rgbaImage, rgbaImage.Bounds(), image.White, image.ZP, draw.Src)
 
@@ -81,8 +81,10 @@ func main() {
 	// Resize avatar image to 40 * 40 size.
 	rszAvatarImage := resize.Resize(40, 40, avatarImage, resize.NearestNeighbor)
 
-	draw.Draw(rgbaImage, rgbaImage.Bounds(), rszAvatarImage,
-		rgbaImage.Bounds().Min.Sub(image.Pt(offsetX, offsetY)), draw.Src)
+	avatarDstPoint := image.Pt(offsetX, offsetY)
+	avatarRectangle := image.Rectangle{avatarDstPoint, avatarDstPoint.Add(rszAvatarImage.Bounds().Size())}
+	draw.Draw(rgbaImage, avatarRectangle, rszAvatarImage,
+		rszAvatarImage.Bounds().Min, draw.Over)
 
 	// Draw the name date and message content.
 	nameDrawer := newDrawer(rgbaImage, fontBold, nameColor, 18)
