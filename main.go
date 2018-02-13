@@ -100,10 +100,10 @@ func main() {
 	}
 	dateDrawer.DrawString(*date)
 
-	contentDrawer := newDrawer(rgbaImage, fontBold, color.Black, 48)
+	contentDrawer := newDrawer(rgbaImage, fontBold, color.Black, 40)
 	for i, line := range strings.Split(*content, "\\n") {
-		// font size is 48px, spacing of lines is 5px
-		contentDrawer.Dot = fixed.P(nameX, nameY+(48+5)*(i+1))
+		// font size is 40px, spacing of lines is 3px
+		contentDrawer.Dot = fixed.P(nameX, nameY+(40+3)*(i+1))
 		contentDrawer.DrawString(line)
 	}
 
